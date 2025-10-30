@@ -21,6 +21,8 @@ export const useSocket = () => {
   const [messages, setMessages] = useState([]);
   const [users, setUsers] = useState([]);
   const [typingUsers, setTypingUsers] = useState([]);
+  const [rooms, setRooms] = useState(['general']);
+  const [currentRoom, setCurrentRoom] = useState('general');
 
   // Connect to socket server
   const connect = (username) => {
@@ -36,8 +38,11 @@ export const useSocket = () => {
   };
 
   // Send a message
-  const sendMessage = (message) => {
-    socket.emit('send_message', { message });
+  const sendMessage = (message, options = {}) => {
+    const payload = { message };
+    if (options.room) payload.room = options.room;
+    if (options.attachmentUrl) payload.attachmentUrl = options.attachmentUrl;
+    socket.emit('send_message', payload);
   };
 
   // Send a private message
@@ -48,6 +53,15 @@ export const useSocket = () => {
   // Set typing status
   const setTyping = (isTyping) => {
     socket.emit('typing', isTyping);
+  };
+
+  // Rooms helpers
+  const joinRoom = (room) => {
+    socket.emit('join_room', room);
+  };
+
+  const leaveRoom = (room) => {
+    socket.emit('leave_room', room);
   };
 
   // Socket event listeners
@@ -117,6 +131,8 @@ export const useSocket = () => {
     socket.on('user_joined', onUserJoined);
     socket.on('user_left', onUserLeft);
     socket.on('typing_users', onTypingUsers);
+    socket.on('room_list', (list) => setRooms(list));
+    socket.on('room_joined', ({ room }) => setCurrentRoom(room));
 
     // Clean up event listeners
     return () => {
@@ -128,6 +144,8 @@ export const useSocket = () => {
       socket.off('user_joined', onUserJoined);
       socket.off('user_left', onUserLeft);
       socket.off('typing_users', onTypingUsers);
+      socket.off('room_list');
+      socket.off('room_joined');
     };
   }, []);
 
@@ -138,12 +156,16 @@ export const useSocket = () => {
     messages,
     users,
     typingUsers,
+    rooms,
+    currentRoom,
     connect,
     disconnect,
     sendMessage,
     sendPrivateMessage,
     setTyping,
+    joinRoom,
+    leaveRoom,
   };
 };
 
-export default socket; 
+export default socket;
